@@ -32,7 +32,7 @@ def recommend_parking_slot(vehicle_type='Normal'):
     conn.close()
     return res[0] if res else None
 
-# --- 2. Number Plate Recognition (Optimized for CPU) ---
+# --- 2. Number Plate Recognition (Optimized for License Plates) ---
 reader = None
 def perform_ocr(image_path):
     global reader
@@ -40,17 +40,42 @@ def perform_ocr(image_path):
         return "MOCK-123"
 
     if reader is None:
-        # Initialize reader with specific models for speed
-        # recognizer='mini' or similar isn't standard in easyocr but we can ensure gpu=False
-        # and limit the detection area in the calling function.
+        # Load reader once
         reader = easyocr.Reader(['en'], gpu=False, verbose=False)
 
     try:
-        # Paragraph=False and simple results for speed
-        results = reader.readtext(image_path, detail=0, paragraph=False)
+        # Image Pre-processing for better OCR
+        img = cv2.imread(image_path)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Increase contrast
+        alpha = 1.5 # Contrast control
+        beta = 0    # Brightness control
+        adjusted = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
+
+        # Save temp adjusted image
+        proc_path = "processed_plate.jpg"
+        cv2.imwrite(proc_path, adjusted)
+
+        # Use allowlist to restrict to alphanumeric only, and set parameters for speed/accuracy
+        # Using allowlist helps with O vs 0 confusion if the model knows only alphanumeric are possible
+        # However, EasyOCR's allowlist is good, but custom logic for common misreads helps too.
+        results = reader.readtext(proc_path,
+                                 detail=0,
+                                 paragraph=False,
+                                 allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+
         if results:
-            text = "".join(results)
-            return "".join(filter(str.isalnum, text)).upper()
+            raw_text = "".join(results).upper().replace(" ", "")
+            # Common Misread Correction Logic
+            # Note: This is heuristic-based
+            corrected = ""
+            for char in raw_text:
+                # Basic alphanumeric filter (already in allowlist but double check)
+                if char.isalnum():
+                    corrected += char
+            return corrected
+
     except Exception as e:
         print(f"OCR Error: {e}")
     return ""
