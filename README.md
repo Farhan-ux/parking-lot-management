@@ -1,59 +1,48 @@
-# Smart Parking Management System with AI (Web Edition)
+# Wisteria Parking: AI-Powered Smart Parking System (Web Edition)
 
-An intelligent, modern web-based parking management solution featuring real-time OCR license plate recognition, predictive analytics, and automated billing.
+A beautiful, high-performance web-based parking management solution featuring real-time IPCam license plate recognition, predictive analytics, and a vibrant "Wisteria Bloom" theme.
 
 ## Requirements
 
 The system requires Python 3.x and the following libraries:
 
 - `streamlit`
-- `streamlit-webrtc`
 - `opencv-python-headless`
 - `easyocr`
 - `numpy`
 - `scikit-learn`
 - `pillow`
-- `aiortc`
-- `av`
-- `sqlite3` (built-in with Python)
+- `sqlite3`
 
-You can install all dependencies using pip:
+You can install the dependencies using pip:
 
 ```bash
-pip install streamlit streamlit-webrtc opencv-python-headless easyocr numpy scikit-learn pillow aiortc av
+pip install streamlit opencv-python-headless easyocr numpy scikit-learn pillow
 ```
 
 ## How to Run
 
-Follow these steps to set up and run the application:
-
 ### 1. Initialize the Database
-Create the database and tables:
-
 ```bash
 python3 init_db.py
 ```
 
 ### 2. (Optional) Generate Dummy Data
-To populate the system with historical data for AI prediction:
-
 ```bash
 python3 generate_dummy_data.py
 ```
 
-### 3. Launch the Web Application
-Start the Streamlit app:
-
+### 3. Launch the Application
 ```bash
 streamlit run app.py
 ```
 
 ## Key Features
-- **Live Monitoring:** Real-time IPCam feed using `streamlit-webrtc`. AI automatically detects license plates and checks against the blacklist.
-- **Parking Operations:** Unified entry/exit management with AI-powered slot recommendations and automatic fee calculation.
-- **AI Analytics:** Peak hour prediction using historical trends and simulated fraud/wrong-parking detection.
-- **Security:** Manage blacklisted vehicles with real-time alerting.
-- **Logs:** View active vehicles and historical parking records.
+- **Wisteria Bloom Theme:** A modern, colorful interface with purple and pink gradients.
+- **LAN IPCam Integration:** Paste your camera's IP or RTSP link in the sidebar to start live monitoring.
+- **CPU-Optimized AI:** Uses lightweight settings for OCR and detection to ensure smooth performance on standard hardware.
+- **Smart Operations:** AI-powered slot recommendations, automated billing, and real-time security alerts.
+- **Data Analytics:** Peak hour prediction and violation detection models.
 
-## AI Report
-For a detailed explanation of the AI models used in this project, please refer to [AI_REPORT.md](AI_REPORT.md).
+## Credits
+**Made by Rafay**
