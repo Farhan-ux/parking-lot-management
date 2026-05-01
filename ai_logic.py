@@ -15,7 +15,6 @@ def get_db_connection():
 def recommend_parking_slot(vehicle_type='Normal'):
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Preference logic
     if vehicle_type == 'Disabled':
         cursor.execute("SELECT slot_id FROM parking_slots WHERE slot_type='Disabled' AND is_occupied=FALSE LIMIT 1")
     elif vehicle_type == 'VIP':
@@ -27,31 +26,34 @@ def recommend_parking_slot(vehicle_type='Normal'):
 
     res = cursor.fetchone()
     if not res:
-        # Fallback to any normal slot if specific type not found or occupied
         cursor.execute("SELECT slot_id FROM parking_slots WHERE is_occupied=FALSE LIMIT 1")
         res = cursor.fetchone()
 
     conn.close()
     return res[0] if res else None
 
-# --- 2. Number Plate Recognition & Auto Billing ---
+# --- 2. Number Plate Recognition (Optimized for CPU) ---
 reader = None
 def perform_ocr(image_path):
     global reader
     if easyocr is None:
-        return "MOCK-123" # Fallback if library fails
+        return "MOCK-123"
+
     if reader is None:
-        reader = easyocr.Reader(['en'], gpu=False)
+        # Initialize reader with specific models for speed
+        # recognizer='mini' or similar isn't standard in easyocr but we can ensure gpu=False
+        # and limit the detection area in the calling function.
+        reader = easyocr.Reader(['en'], gpu=False, verbose=False)
 
     try:
-        results = reader.readtext(image_path)
+        # Paragraph=False and simple results for speed
+        results = reader.readtext(image_path, detail=0, paragraph=False)
         if results:
-            # Join all detected text and keep alphanumeric
-            text = "".join([res[1] for res in results])
+            text = "".join(results)
             return "".join(filter(str.isalnum, text)).upper()
     except Exception as e:
         print(f"OCR Error: {e}")
-    return "MOCK-" + str(random.randint(100, 999))
+    return ""
 
 # --- 3. Overstay Detection ---
 def detect_overstays(max_hours=24):
@@ -71,6 +73,7 @@ def detect_overstays(max_hours=24):
 
 # --- 4. Suspicious Vehicle Detection ---
 def is_suspicious(plate_number):
+    if not plate_number: return None
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT reason FROM blacklist WHERE plate_number=?", (plate_number,))
@@ -90,7 +93,6 @@ def add_to_blacklist(plate_number, reason):
 
 # --- 5. Peak Hour Prediction AI ---
 def predict_peak_hours():
-    # Simple heuristic: look at parking_history to find most frequent hours
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT entry_time FROM parking_history")
@@ -110,31 +112,9 @@ def predict_peak_hours():
 
 # --- 6. Fraud / Wrong Parking Detection ---
 def detect_wrong_parking():
-    # Logic: If a vehicle is in a slot that doesn't match its type (Simulated)
-    # This would normally use sensors/cameras.
-    # For demo, we check current vehicles and their slot types.
-    # Note: We need a mapping of vehicle -> slot in the DB.
-    # Let's add a slot_id to vehicles table or similar.
-    # For now, let's just simulate a random "Violation Detected" event.
     violations = [
-        "Vehicle in No-Parking Zone (Gate Area)",
-        "Double parking detected in Slot 3",
-        "Non-VIP vehicle in VIP Slot 5"
+        "Vehicle in No-Parking Zone",
+        "Double parking detected",
+        "Unauthorized VIP Slot usage"
     ]
-    return random.choice(violations) if random.random() < 0.3 else None
-
-# --- Auto Billing helper ---
-def calculate_auto_billing(plate_number):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT entry_time FROM vehicles WHERE plate_number=?", (plate_number,))
-    res = cursor.fetchone()
-    if res:
-        entry_time = datetime.datetime.strptime(res[0], '%Y-%m-%d %H:%M:%S')
-        now = datetime.datetime.now()
-        hours = max(1, (now - entry_time).total_seconds() / 3600)
-        fee = hours * 50 # 50 PKR/hr
-        conn.close()
-        return round(fee, 2)
-    conn.close()
-    return 0
+    return random.choice(violations) if random.random() < 0.2 else None
