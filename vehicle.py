@@ -1,24 +1,30 @@
-import mysql.connector
+import sqlite3
 
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="1234",
-    database="parking_system"
-)
-cursor = db.cursor()
+def get_db_connection():
+    return sqlite3.connect('parking_system.db')
 
 def add_vehicle(plate_number, vehicle_type):
-    query = "INSERT INTO vehicles (plate_number, vehicle_type) VALUES (%s, %s)"
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "INSERT INTO vehicles (plate_number, vehicle_type) VALUES (?, ?)"
     cursor.execute(query, (plate_number, vehicle_type))
-    db.commit()
-    return cursor.lastrowid
+    conn.commit()
+    vehicle_id = cursor.lastrowid
+    conn.close()
+    return vehicle_id
 
 def remove_vehicle(vehicle_id):
-    query = "DELETE FROM vehicles WHERE id=%s"
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "DELETE FROM vehicles WHERE id=?"
     cursor.execute(query, (vehicle_id,))
-    db.commit()
+    conn.commit()
+    conn.close()
 
 def get_all_vehicles():
+    conn = get_db_connection()
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM vehicles")
-    return cursor.fetchall()
+    vehicles = cursor.fetchall()
+    conn.close()
+    return vehicles
