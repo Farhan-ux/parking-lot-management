@@ -1,15 +1,12 @@
-import mysql.connector
+import sqlite3
 
-print("Starting DB test...")   # <--- Add this
+def test_connection():
+    try:
+        conn = sqlite3.connect('parking_system.db')
+        print("SQLite connection OK")
+        conn.close()
+    except Exception as e:
+        print(f"SQLite connection FAILED: {e}")
 
-try:
-    db = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="1234",
-        database="elite_parking"
-    )
-    cursor = db.cursor()
-    print("Database connection OK")
-except Exception as e:
-    print("Database connection FAILED:", e)
+if __name__ == "__main__":
+    test_connection()

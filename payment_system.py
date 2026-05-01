@@ -1,17 +1,15 @@
-import mysql.connector
+import sqlite3
 
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="1234",
-    database="parking_system"
-)
-cursor = db.cursor()
+def get_db_connection():
+    return sqlite3.connect('parking_system.db')
 
 def add_payment(vehicle_id, amount):
-    query = "INSERT INTO receipts (slot_number, amount) VALUES (%s, %s)"
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "INSERT INTO receipts (vehicle_id, amount) VALUES (?, ?)"
     cursor.execute(query, (vehicle_id, amount))
-    db.commit()
+    conn.commit()
+    conn.close()
 
 def calculate_fee(hours_parked):
     rate_per_hour = 50  # PKR
