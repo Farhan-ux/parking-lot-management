@@ -34,7 +34,8 @@ This project enhances a traditional parking management system with several AI-dr
 
 ## Technical Implementation
 - **Language:** Python
-- **GUI:** Tkinter (ttk for modern tabbed interface)
+- **Interface:** Streamlit (Modern Web Framework)
+- **Computer Vision:** OpenCV & EasyOCR for live IPCam plate detection
 - **Database:** SQLite3 (Migrated for portability and ease of use)
 - **AI Libraries:** EasyOCR, OpenCV, NumPy, Scikit-learn
 - **Data:** Synthetic historical data generated to demonstrate predictive capabilities.
