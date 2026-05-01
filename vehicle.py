@@ -3,11 +3,11 @@ import sqlite3
 def get_db_connection():
     return sqlite3.connect('parking_system.db')
 
-def add_vehicle(plate_number, vehicle_type):
+def add_vehicle(plate_number, vehicle_type, slot_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    query = "INSERT INTO vehicles (plate_number, vehicle_type) VALUES (?, ?)"
-    cursor.execute(query, (plate_number, vehicle_type))
+    query = "INSERT INTO vehicles (plate_number, vehicle_type, slot_id) VALUES (?, ?, ?)"
+    cursor.execute(query, (plate_number, vehicle_type, slot_id))
     conn.commit()
     vehicle_id = cursor.lastrowid
     conn.close()
@@ -16,6 +16,15 @@ def add_vehicle(plate_number, vehicle_type):
 def remove_vehicle(vehicle_id):
     conn = get_db_connection()
     cursor = conn.cursor()
+    # Before deleting, get details for history
+    cursor.execute("SELECT plate_number, entry_time, slot_id FROM vehicles WHERE id=?", (vehicle_id,))
+    v = cursor.fetchone()
+    if v:
+        import datetime
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cursor.execute("INSERT INTO parking_history (plate_number, entry_time, exit_time, slot_id) VALUES (?, ?, ?, ?)",
+                       (v[0], v[1], now, v[2]))
+
     query = "DELETE FROM vehicles WHERE id=?"
     cursor.execute(query, (vehicle_id,))
     conn.commit()

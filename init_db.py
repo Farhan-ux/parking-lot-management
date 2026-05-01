@@ -4,12 +4,13 @@ def init_db():
     conn = sqlite3.connect('parking_system.db')
     cursor = conn.cursor()
 
-    # Vehicles table
+    # Vehicles table - Added slot_id
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS vehicles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             plate_number TEXT NOT NULL,
             vehicle_type TEXT NOT NULL,
+            slot_id INTEGER,
             entry_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -18,7 +19,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS parking_slots (
             slot_id INTEGER PRIMARY KEY,
-            slot_type TEXT NOT NULL, -- e.g., 'Normal', 'Disabled', 'VIP', 'Bike'
+            slot_type TEXT NOT NULL,
             is_occupied BOOLEAN DEFAULT FALSE
         )
     ''')
@@ -34,7 +35,7 @@ def init_db():
         )
     ''')
 
-    # Blacklist for Suspicious Vehicle Detection
+    # Blacklist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS blacklist (
             plate_number TEXT PRIMARY KEY,
@@ -42,7 +43,7 @@ def init_db():
         )
     ''')
 
-    # Parking History for Prediction AI
+    # Parking History
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS parking_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,7 +54,6 @@ def init_db():
         )
     ''')
 
-    # Initialize some slots if they don't exist
     cursor.execute("SELECT COUNT(*) FROM parking_slots")
     if cursor.fetchone()[0] == 0:
         slots = [
