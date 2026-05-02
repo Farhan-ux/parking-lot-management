@@ -262,7 +262,7 @@ elif page == "Parking Operations":
                 res = cursor.fetchone()
                 if res:
                     v_id, e_time = res
-                    hrs = max(1, (datetime.datetime.now() - datetime.datetime.strptime(e_time, '%Y-%m-%d %H:%M:%S')).total_seconds()/3600)
+                    hrs = max(1, (datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).replace(tzinfo=None) - datetime.datetime.strptime(e_time, '%Y-%m-%d %H:%M:%S')).total_seconds()/3600)
                     fee = parking_lot.calculate_fee(hrs)
                     parking_lot.remove_parked_vehicle(v_id, hrs)
                     st.metric("Total Fee", f"{round(fee, 2)} PKR")

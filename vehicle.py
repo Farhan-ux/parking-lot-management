@@ -3,8 +3,10 @@ from database import get_db_connection
 def add_vehicle(plate_number, vehicle_type, slot_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    query = "INSERT INTO vehicles (plate_number, vehicle_type, slot_id) VALUES (?, ?, ?)"
-    cursor.execute(query, (plate_number, vehicle_type, slot_id))
+    import datetime
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')
+    query = "INSERT INTO vehicles (plate_number, vehicle_type, slot_id, entry_time) VALUES (?, ?, ?, ?)"
+    cursor.execute(query, (plate_number, vehicle_type, slot_id, now))
     conn.commit()
     vehicle_id = cursor.lastrowid
     conn.close()
@@ -17,7 +19,7 @@ def remove_vehicle(vehicle_id):
     v = cursor.fetchone()
     if v:
         import datetime
-        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute("INSERT INTO parking_history (plate_number, entry_time, exit_time, slot_id) VALUES (?, ?, ?, ?)",
                        (v[0], v[1], now, v[2]))
 

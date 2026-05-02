@@ -13,7 +13,7 @@ def generate_data():
     peak_hours = [8, 9, 10, 17, 18, 19]
     other_hours = [11, 12, 13, 14, 15, 16, 20, 21, 22]
 
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).replace(tzinfo=None)
 
     for i in range(100):
         if random.random() < 0.7:
