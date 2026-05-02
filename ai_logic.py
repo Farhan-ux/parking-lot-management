@@ -32,7 +32,7 @@ def recommend_parking_slot(vehicle_type='Normal'):
     conn.close()
     return res[0] if res else None
 
-# --- 2. Number Plate Recognition (Optimized for License Plates) ---
+# --- 2. Enhanced Number Plate Recognition (High Accuracy) ---
 reader = None
 def perform_ocr(image_path):
     global reader
@@ -44,37 +44,35 @@ def perform_ocr(image_path):
         reader = easyocr.Reader(['en'], gpu=False, verbose=False)
 
     try:
-        # Image Pre-processing for better OCR
+        # Advanced Image Pre-processing for License Plates
         img = cv2.imread(image_path)
+
+        # 1. Resize for better detection
+        img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+
+        # 2. Grayscale & Noise Removal
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.bilateralFilter(gray, 11, 17, 17) # Preserve edges, remove noise
 
-        # Increase contrast
-        alpha = 1.5 # Contrast control
-        beta = 0    # Brightness control
-        adjusted = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
+        # 3. Adaptive Thresholding (Handles shadows and lighting better)
+        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                     cv2.THRESH_BINARY, 11, 2)
 
-        # Save temp adjusted image
-        proc_path = "processed_plate.jpg"
-        cv2.imwrite(proc_path, adjusted)
+        proc_path = "highly_processed_plate.jpg"
+        cv2.imwrite(proc_path, thresh)
 
-        # Use allowlist to restrict to alphanumeric only, and set parameters for speed/accuracy
-        # Using allowlist helps with O vs 0 confusion if the model knows only alphanumeric are possible
-        # However, EasyOCR's allowlist is good, but custom logic for common misreads helps too.
+        # 4. OCR with Optimized Parameters
+        # allowlist helps with O vs 0 confusion
+        # contrast_ths and adjust_contrast can help too
         results = reader.readtext(proc_path,
                                  detail=0,
                                  paragraph=False,
-                                 allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+                                 allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                                 mag_ratio=2) # Higher mag_ratio for small text
 
         if results:
             raw_text = "".join(results).upper().replace(" ", "")
-            # Common Misread Correction Logic
-            # Note: This is heuristic-based
-            corrected = ""
-            for char in raw_text:
-                # Basic alphanumeric filter (already in allowlist but double check)
-                if char.isalnum():
-                    corrected += char
-            return corrected
+            return raw_text
 
     except Exception as e:
         print(f"OCR Error: {e}")
@@ -98,7 +96,7 @@ def detect_overstays(max_hours=24):
 
 # --- 4. Suspicious Vehicle Detection ---
 def is_suspicious(plate_number):
-    if not plate_number: return None
+    if not plate_number or plate_number == "Scanning...": return None
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT reason FROM blacklist WHERE plate_number=?", (plate_number,))
