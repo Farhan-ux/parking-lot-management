@@ -123,7 +123,7 @@ def detect_overstays(max_hours=24):
     cursor.execute("SELECT id, plate_number, entry_time FROM vehicles")
     vehicles = cursor.fetchall()
     overstays = []
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).replace(tzinfo=None)
     for v in vehicles:
         entry_time = datetime.datetime.strptime(v[2], '%Y-%m-%d %H:%M:%S')
         duration = (now - entry_time).total_seconds() / 3600

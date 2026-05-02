@@ -12,7 +12,7 @@ def init_db():
             plate_number TEXT NOT NULL,
             vehicle_type TEXT NOT NULL,
             slot_id INTEGER,
-            entry_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            entry_time TIMESTAMP
         )
     ''')
 
