@@ -18,29 +18,16 @@ if 'live_plate' not in st.session_state:
     st.session_state['live_plate'] = "Waiting..."
 
 # --- Theme Configuration ---
-st.sidebar.title("🎨 Appearance")
-theme_mode = st.sidebar.radio("Switch Theme", ["Wisteria Bloom (Light)", "Midnight Bloom (Dark)"])
-
-if theme_mode == "Wisteria Bloom (Light)":
-    primary_color = "#6a1b9a"
-    bg_gradient = "linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%)"
-    sidebar_bg = "#f8bbd0"
-    text_color = "#212121"
-    card_bg = "#ffffff"
-    btn_bg = "#9c27b0"
-    footer_color = "#880e4f"
-    input_bg = "#ffffff"
-    input_text = "#000000"
-else:
-    primary_color = "#e1bee7"
-    bg_gradient = "linear-gradient(135deg, #0d001a 0%, #1a237e 100%)"
-    sidebar_bg = "#000051"
-    text_color = "#ffffff"
-    card_bg = "#121212"
-    btn_bg = "#7b1fa2"
-    footer_color = "#f48fb1"
-    input_bg = "#262730"
-    input_text = "#ffffff"
+# Theme is fixed to Midnight Bloom (Dark) as per user request
+primary_color = "#e1bee7"
+bg_gradient = "linear-gradient(135deg, #0d001a 0%, #1a237e 100%)"
+sidebar_bg = "#000051"
+text_color = "#ffffff"
+card_bg = "#121212"
+btn_bg = "#7b1fa2"
+footer_color = "#f48fb1"
+input_bg = "#262730"
+input_text = "#ffffff"
 
 st.markdown(f"""
     <style>
@@ -139,7 +126,7 @@ if not os.path.exists('parking_system.db'):
 
 # Sidebar Content
 st.sidebar.image("https://img.icons8.com/color/96/000000/lotus.png")
-st.sidebar.markdown(f"### **{theme_mode.split(' ')[0]} Parking**")
+st.sidebar.markdown(f"### **Midnight Parking**")
 page = st.sidebar.radio("Menu", ["Live Monitoring", "Parking Operations", "AI Analytics", "Security", "Logs"])
 
 st.sidebar.markdown("---")
@@ -211,7 +198,9 @@ if page == "Live Monitoring":
 
     with c_right:
         st.markdown("### 🔍 Results")
-        curr_plate = st.session_state['live_plate']
+
+        # Enable manual editing of the detected plate
+        curr_plate = st.text_input("Detected Plate (Edit if wrong)", value=st.session_state['live_plate'])
 
         if curr_plate == "Waiting...":
             st.write("Awaiting camera input...")
