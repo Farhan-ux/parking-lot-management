@@ -43,3 +43,6 @@ streamlit run app.py
 - **IPCam Integration:** Direct stream support from LAN or RTSP links.
 - **Made by Rafay:** Personalized branding and professional UI design.
 - **Advanced AI Analytics:** Peak demand prediction and real-time violation monitoring.
+
+## Credits
+**Made by Rafay**

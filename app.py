@@ -17,58 +17,58 @@ st.sidebar.title("🎨 Appearance")
 theme_mode = st.sidebar.radio("Switch Theme", ["Wisteria Bloom (Light)", "Midnight Bloom (Dark)"])
 
 if theme_mode == "Wisteria Bloom (Light)":
-    # Wisteria Bloom (Light) - Purple/Pink accents
-    primary_color = "#6a1b9a" # Deep Purple
+    primary_color = "#6a1b9a"
     bg_gradient = "linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%)"
     sidebar_bg = "#f8bbd0"
-    text_color = "#212121" # Jet Black for best readability
+    text_color = "#212121"
     card_bg = "#ffffff"
     btn_bg = "#9c27b0"
     footer_color = "#880e4f"
+    input_bg = "#ffffff"
     input_text = "#000000"
 else:
-    # Midnight Bloom (Dark Mode) - Deep Blue/Purple with Neon
-    primary_color = "#e1bee7" # Soft Lavender
+    primary_color = "#e1bee7"
     bg_gradient = "linear-gradient(135deg, #0d001a 0%, #1a237e 100%)"
     sidebar_bg = "#000051"
-    text_color = "#ffffff" # Pure White for best readability
+    text_color = "#ffffff"
     card_bg = "#121212"
     btn_bg = "#7b1fa2"
     footer_color = "#f48fb1"
+    input_bg = "#262730"
     input_text = "#ffffff"
 
 st.markdown(f"""
     <style>
-    /* Global Styles */
     .stApp {{
         background: {bg_gradient};
         color: {text_color} !important;
     }}
 
-    /* Sidebar styling */
     [data-testid="stSidebar"] {{
         background-color: {sidebar_bg} !important;
         border-right: 3px solid {primary_color};
     }}
 
-    /* Text Readability Overrides */
     h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown, .stText, .stMetric label {{
         color: {text_color} !important;
-        font-family: 'Segoe UI', Arial, sans-serif;
     }}
 
-    /* Metric Value Color */
     [data-testid="stMetricValue"] {{
         color: {primary_color} !important;
         font-weight: bold;
     }}
 
-    /* Input Field Text visibility */
-    input, select, textarea, div[role="combobox"] span {{
-        color: #000000 !important; /* Keep internal input text dark for contrast in light boxes */
+    /* INPUT VISIBILITY */
+    input, select, textarea {{
+        color: {input_text} !important;
+        background-color: {input_bg} !important;
     }}
 
-    /* Tab color */
+    div[data-baseweb="select"] > div {{
+        background-color: {input_bg} !important;
+        color: {input_text} !important;
+    }}
+
     .stTabs [data-baseweb="tab"] {{
         color: {text_color} !important;
         background-color: transparent !important;
@@ -77,24 +77,20 @@ st.markdown(f"""
         background-color: {primary_color} !important;
     }}
 
-    /* Buttons */
     .stButton>button {{
         background-color: {btn_bg};
         color: white !important;
         border-radius: 25px;
         border: none;
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        font-weight: bold;
     }}
 
-    /* Cards */
     div.stMetric, .stTable, div[data-testid="stExpander"] {{
         background-color: {card_bg} !important;
         border: 2px solid {primary_color} !important;
         border-radius: 12px;
     }}
 
-    /* Footer branding */
     .made-by {{
         position: fixed;
         bottom: 25px;
@@ -136,14 +132,21 @@ if page == "Live Monitoring":
 
     with c_left:
         if ip_link:
-            st.info(f"Connecting to Stream...")
+            st.info(f"Connecting to Stream: {ip_link}")
             run = st.checkbox("Enable Live Feed", value=True)
             FRAME_WIN = st.image([])
-            cap = cv2.VideoCapture(0) # Mock for sandbox, in reality: cap = cv2.VideoCapture(ip_link)
+            # Use ip_link if provided, else fallback to webcam
+            source = ip_link if ip_link else 0
+            cap = cv2.VideoCapture(source)
             while run:
                 ret, frame = cap.read()
-                if not ret: break
-                if int(time.time() * 10) % 8 == 0:
+                if not ret:
+                    st.error("Failed to fetch stream. Using webcam fallback...")
+                    cap = cv2.VideoCapture(0)
+                    ret, frame = cap.read()
+                    if not ret: break
+
+                if int(time.time() * 10) % 10 == 0:
                     cv2.imwrite("temp_frame.jpg", frame)
                     plate = ai_logic.perform_ocr("temp_frame.jpg")
                     if plate: st.session_state['live_plate'] = plate
@@ -188,31 +191,38 @@ elif page == "Parking Operations":
         with col2:
             if st.button("Get AI Recommendation"):
                 rec = ai_logic.recommend_parking_slot(vtype)
-                st.session_state['op_slot'] = rec
-            slat = st.text_input("Target Slot", value=str(st.session_state.get('op_slot', "")))
+                st.session_state['rec_slot'] = rec
+            # Fixed session state key mismatch
+            slat = st.text_input("Target Slot", value=str(st.session_state.get('rec_slot', "")))
         if st.button("Complete Parking"):
             if plat and slat:
-                if parking_lot.park_vehicle(plat, vtype, slat):
-                    st.success("Parking Confirmed!")
-                    st.balloons()
+                if ai_logic.is_suspicious(plat):
+                    st.error(f"🛑 ENTRY DENIED: Vehicle {plat} is blacklisted!")
+                else:
+                    if parking_lot.park_vehicle(plat, vtype, slat):
+                        st.success("Parking Confirmed!")
+                        st.balloons()
             else: st.error("Fill required fields")
 
     with t_out:
         out_plat = st.text_input("Plate to Exit")
         if st.button("Verify & Exit"):
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, entry_time FROM vehicles WHERE plate_number=?", (out_plat,))
-            res = cursor.fetchone()
-            if res:
-                v_id, e_time = res
-                hrs = max(1, (datetime.datetime.now() - datetime.datetime.strptime(e_time, '%Y-%m-%d %H:%M:%S')).total_seconds()/3600)
-                fee = parking_lot.calculate_fee(hrs)
-                parking_lot.remove_parked_vehicle(v_id, hrs)
-                st.metric("Amount Due", f"{round(fee, 2)} PKR")
-                st.success(f"Exit cleared for {out_plat}")
-            else: st.error("No active session found")
-            conn.close()
+            if ai_logic.is_suspicious(out_plat):
+                st.error(f"🛑 EXIT LOCKED: Vehicle {out_plat} has security violations. Contact Admin.")
+            else:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, entry_time FROM vehicles WHERE plate_number=?", (out_plat,))
+                res = cursor.fetchone()
+                if res:
+                    v_id, e_time = res
+                    hrs = max(1, (datetime.datetime.now() - datetime.datetime.strptime(e_time, '%Y-%m-%d %H:%M:%S')).total_seconds()/3600)
+                    fee = parking_lot.calculate_fee(hrs)
+                    parking_lot.remove_parked_vehicle(v_id, hrs)
+                    st.metric("Amount Due", f"{round(fee, 2)} PKR")
+                    st.success(f"Exit cleared for {out_plat}")
+                else: st.error("No active session found")
+                conn.close()
 
 elif page == "AI Analytics":
     st.markdown("### 📈 Intelligent Insights")
@@ -248,6 +258,10 @@ elif page == "Logs":
     st.markdown("### 📜 System Logs")
     conn = get_db_connection()
     t_a, t_h = st.tabs(["Active Units", "Archive History"])
-    with t_a: st.table(conn.execute("SELECT plate_number, vehicle_type, slot_id, entry_time FROM vehicles").fetchall())
-    with t_h: st.table(conn.execute("SELECT * FROM parking_history ORDER BY id DESC LIMIT 20").fetchall())
+    with t_a:
+        active_v = conn.execute("SELECT plate_number, vehicle_type, slot_id, entry_time FROM vehicles").fetchall()
+        st.table(active_v)
+    with t_h:
+        hist_v = conn.execute("SELECT * FROM parking_history ORDER BY id DESC LIMIT 20").fetchall()
+        st.table(hist_v)
     conn.close()
