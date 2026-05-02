@@ -1,10 +1,11 @@
 import sqlite3
+from database import get_db_connection
 
 def init_db():
-    conn = sqlite3.connect('parking_system.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Vehicles table - Added slot_id
+    # Vehicles table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS vehicles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

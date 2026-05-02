@@ -5,10 +5,11 @@ This project transforms a traditional parking lot into a high-intelligence facil
 
 ## Implemented AI Models & Architectures
 
-### 1. Advanced Deep Learning ANPR (Automatic Number Plate Recognition)
-- **Architecture:** Uses a state-of-the-art pipeline consisting of **CRAFT** (Convolutional Character Region Awareness) for text detection and **CRNN** (Convolutional Recurrent Neural Network) for sequence recognition.
-- **Deep Learning Detail:** The model uses ResNet-based feature extraction and an LSTM-based sequence decoder with CTC (Connectionist Temporal Classification) loss for superior accuracy on diverse fonts and lighting conditions.
-- **Optimizations:** Implemented custom image pre-processing (Bilateral filtering, Adaptive Thresholding, and Sharpening) to maximize recognition confidence.
+### 1. Two-Stage CNN ANPR (Automatic Number Plate Recognition)
+- **Architecture:** Implements a sophisticated two-stage pipeline for maximum recognition accuracy.
+  - **Stage 1 (Detection):** Uses the **CRAFT** (Convolutional Character Region Awareness) model to identify and localize the specific bounding box of the license plate within the frame.
+  - **Stage 2 (Recognition):** The localized plate is cropped, upscaled, and enhanced using **CLAHE** (Contrast Limited Adaptive Histogram Equalization). Recognition is then performed using a **CRNN** (Convolutional Recurrent Neural Network) with an LSTM-based sequence decoder.
+- **Benefits:** By focusing only on the cropped plate region, the model minimizes background noise and character confusion, delivering professional-grade accuracy.
 
 ### 2. Intelligent Parking Space Recommendation AI
 - **Description:** A logic-driven AI that assigns slots based on real-time availability and vehicle classification (Normal, Disabled, VIP, Bike).
@@ -35,10 +36,10 @@ This project transforms a traditional parking lot into a high-intelligence facil
 
 ## Technical Stack
 - **Interface:** Streamlit (Dynamic Theme Engine: Wisteria/Midnight Bloom)
-- **Computer Vision:** OpenCV & Deep Learning-based EasyOCR
+- **Computer Vision:** OpenCV & Two-Stage Deep Learning Pipeline (CRAFT + CRNN)
 - **Database:** SQLite3
 - **Data Processing:** NumPy & Scikit-learn
 - **Branding:** Made by Rafay
 
 ## Conclusion
-By moving from traditional OCR to a Deep Learning-based recognition pipeline and implementing predictive analytics, this system offers a professional-grade solution for modern smart city infrastructure.
+The transition to a Two-Stage CNN architecture significantly enhances the system's ability to operate in real-world conditions, providing reliable license plate recognition and intelligent facility management.

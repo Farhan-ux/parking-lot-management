@@ -1,7 +1,4 @@
-import sqlite3
-
-def get_db_connection():
-    return sqlite3.connect('parking_system.db')
+from database import get_db_connection
 
 def add_vehicle(plate_number, vehicle_type, slot_id):
     conn = get_db_connection()
@@ -16,7 +13,6 @@ def add_vehicle(plate_number, vehicle_type, slot_id):
 def remove_vehicle(vehicle_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Before deleting, get details for history
     cursor.execute("SELECT plate_number, entry_time, slot_id FROM vehicles WHERE id=?", (vehicle_id,))
     v = cursor.fetchone()
     if v:

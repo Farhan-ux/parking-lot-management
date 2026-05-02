@@ -8,6 +8,7 @@ import ai_logic
 import parking_lot
 import sqlite3
 import time
+from database import get_db_connection
 
 # Page Configuration
 st.set_page_config(page_title="Wisteria Smart Parking", layout="wide", page_icon="🌸")
@@ -17,22 +18,20 @@ st.sidebar.title("🎨 Appearance")
 theme_mode = st.sidebar.radio("Switch Theme", ["Wisteria Bloom (Light)", "Midnight Bloom (Dark)"])
 
 if theme_mode == "Wisteria Bloom (Light)":
-    # Wisteria Bloom (Light)
-    primary_color = "#6a1b9a" # Deep Purple
+    primary_color = "#6a1b9a"
     bg_gradient = "linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%)"
     sidebar_bg = "#f8bbd0"
-    text_color = "#212121" # High Contrast Black
+    text_color = "#212121"
     card_bg = "#ffffff"
     btn_bg = "#9c27b0"
     footer_color = "#880e4f"
     input_bg = "#ffffff"
     input_text = "#000000"
 else:
-    # Midnight Bloom (Dark Mode)
-    primary_color = "#e1bee7" # Soft Lavender
+    primary_color = "#e1bee7"
     bg_gradient = "linear-gradient(135deg, #0d001a 0%, #1a237e 100%)"
     sidebar_bg = "#000051"
-    text_color = "#ffffff" # Pure White
+    text_color = "#ffffff"
     card_bg = "#121212"
     btn_bg = "#7b1fa2"
     footer_color = "#f48fb1"
@@ -41,19 +40,16 @@ else:
 
 st.markdown(f"""
     <style>
-    /* Global Styles */
     .stApp {{
         background: {bg_gradient};
         color: {text_color} !important;
     }}
 
-    /* Sidebar Styling */
     [data-testid="stSidebar"] {{
         background-color: {sidebar_bg} !important;
         border-right: 3px solid {primary_color};
     }}
 
-    /* Text Visibility Overrides */
     h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown, .stText, .stMetric label {{
         color: {text_color} !important;
         font-family: 'Segoe UI', Arial, sans-serif;
@@ -64,7 +60,6 @@ st.markdown(f"""
         font-weight: bold;
     }}
 
-    /* FIXED INPUT VISIBILITY */
     input, select, textarea {{
         color: {input_text} !important;
         background-color: {input_bg} !important;
@@ -76,21 +71,13 @@ st.markdown(f"""
         color: {input_text} !important;
     }}
 
-    /* STREAMLIT INTERNAL CAMERA BUTTONS (TAKE PHOTO / CLEAR) */
     button[data-testid="baseButton-secondary"] {{
         background-color: {primary_color} !important;
         color: white !important;
         border: 2px solid white !important;
         font-weight: bold !important;
-        opacity: 1 !important;
     }}
 
-    button[data-testid="baseButton-secondary"]:hover {{
-        background-color: {btn_bg} !important;
-        transform: scale(1.05);
-    }}
-
-    /* Tabs Styling */
     .stTabs [data-baseweb="tab"] {{
         color: {text_color} !important;
         background-color: transparent !important;
@@ -100,7 +87,6 @@ st.markdown(f"""
         background-color: {primary_color} !important;
     }}
 
-    /* Main Action Buttons */
     .stButton>button {{
         background-color: {btn_bg};
         color: white !important;
@@ -111,23 +97,23 @@ st.markdown(f"""
         text-transform: uppercase;
     }}
 
-    /* Metrics and Cards */
     div.stMetric, .stTable, div[data-testid="stExpander"] {{
         background-color: {card_bg} !important;
         border: 2px solid {primary_color} !important;
         border-radius: 12px;
     }}
 
-    /* Footer branding in Sidebar */
+    /* SCROLLING FOOTER IN SIDEBAR */
     .made-by {{
-        position: fixed;
-        bottom: 25px;
-        left: 20px;
+        margin-top: 50px;
         font-family: 'Comic Sans MS', cursive;
         color: {footer_color};
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 900;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        text-align: center;
+        width: 100%;
+        display: block;
+        padding-bottom: 20px;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -136,9 +122,6 @@ st.markdown(f"""
 if not os.path.exists('parking_system.db'):
     import init_db
     init_db.init_db()
-
-def get_db_connection():
-    return sqlite3.connect('parking_system.db')
 
 # Sidebar Content
 st.sidebar.image("https://img.icons8.com/color/96/000000/lotus.png")
@@ -149,13 +132,14 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("🎥 IPCam Setup")
 ip_link = st.sidebar.text_input("Stream Link (IP/RTSP)", placeholder="e.g. 192.168.1.50")
 
-# Made by Rafay Branding
+# Made by Rafay Branding (Moved to end of sidebar flow)
+st.sidebar.markdown("---")
 st.sidebar.markdown(f'<div class="made-by">Made by Rafay</div>', unsafe_allow_html=True)
 
 st.title(f"🌸 {page}")
 
 if page == "Live Monitoring":
-    st.subheader("Deep Learning License Plate Scanner")
+    st.subheader("High-Accuracy Two-Stage CNN Scanner")
     c_left, c_right = st.columns([2, 1])
 
     with c_left:
@@ -173,7 +157,6 @@ if page == "Live Monitoring":
                     ret, frame = cap.read()
                     if not ret: break
 
-                # Recognition Loop
                 if int(time.time() * 10) % 10 == 0:
                     cv2.imwrite("dl_frame.jpg", frame)
                     plate = ai_logic.perform_ocr("dl_frame.jpg")
@@ -198,21 +181,17 @@ if page == "Live Monitoring":
                 st.image(cimg, channels="BGR")
 
     with c_right:
-        st.markdown("### 🔍 Detection Intelligence")
+        st.markdown("### 🔍 Two-Stage Detection Intelligence")
         curr_plate = st.session_state.get('live_plate', "Waiting...")
 
         if curr_plate == "Waiting...":
             st.write("Awaiting visual input from camera...")
         else:
-            st.success(f"**DL Detected Plate:** {curr_plate}")
-
+            st.success(f"**Plate Found:** {curr_plate}")
             sec_msg = ai_logic.is_suspicious(curr_plate)
-            if sec_msg:
-                st.error(f"🚨 **SECURITY ALERT:** {sec_msg}")
-            else:
-                st.info("✅ Security Status: CLEAR")
+            if sec_msg: st.error(f"🚨 **SECURITY ALERT:** {sec_msg}")
+            else: st.info("✅ Security Status: CLEAR")
 
-            # Smart Actions
             col_b1, col_b2 = st.columns(2)
             with col_b1:
                 if st.button("Move to Entry Gate"):
@@ -278,7 +257,7 @@ elif page == "AI Analytics":
         if st.button("Run Prediction Model"):
             st.metric("Predicted Peak Hour", ai_logic.predict_peak_hours())
     with r:
-        st.info("Real-time Violation Detection")
+        st.info("Dynamic Violation Check")
         if st.button("Simulate AI Scan"):
             v = ai_logic.detect_wrong_parking()
             if v: st.warning(f"⚠️ AI Alert: {v}")
