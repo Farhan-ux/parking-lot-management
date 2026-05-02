@@ -13,6 +13,10 @@ from database import get_db_connection
 # Page Configuration
 st.set_page_config(page_title="Wisteria Smart Parking", layout="wide", page_icon="🌸")
 
+# Initialize Session State
+if 'live_plate' not in st.session_state:
+    st.session_state['live_plate'] = "Waiting..."
+
 # --- Theme Configuration ---
 st.sidebar.title("🎨 Appearance")
 theme_mode = st.sidebar.radio("Switch Theme", ["Wisteria Bloom (Light)", "Midnight Bloom (Dark)"])
@@ -103,7 +107,6 @@ st.markdown(f"""
         border-radius: 12px;
     }}
 
-    /* SCROLLING FOOTER IN SIDEBAR */
     .made-by {{
         margin-top: 50px;
         font-family: 'Comic Sans MS', cursive;
@@ -132,14 +135,14 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("🎥 IPCam Setup")
 ip_link = st.sidebar.text_input("Stream Link (IP/RTSP)", placeholder="e.g. 192.168.1.50")
 
-# Made by Rafay Branding (Moved to end of sidebar flow)
+# Made by Rafay Branding
 st.sidebar.markdown("---")
 st.sidebar.markdown(f'<div class="made-by">Made by Rafay</div>', unsafe_allow_html=True)
 
 st.title(f"🌸 {page}")
 
 if page == "Live Monitoring":
-    st.subheader("High-Accuracy Two-Stage CNN Scanner")
+    st.subheader("Two-Stage Deep Learning Scanner")
     c_left, c_right = st.columns([2, 1])
 
     with c_left:
@@ -164,47 +167,53 @@ if page == "Live Monitoring":
 
                 h, w, _ = frame.shape
                 cv2.rectangle(frame, (w//4, h//4), (3*w//4, 3*h//4), (255, 0, 255), 3)
-                if st.session_state.get('live_plate'):
+                if st.session_state.get('live_plate') and st.session_state['live_plate'] != "Waiting...":
                     cv2.putText(frame, st.session_state['live_plate'], (w//4, h//4-10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 255), 3)
                 FRAME_WIN.image(frame, channels="BGR")
             cap.release()
         else:
             st.warning("Connect IPCam in sidebar or use local camera:")
-            img = st.camera_input("Take Photo of Plate")
+            img = st.camera_input("Scan License Plate")
             if img:
                 b = img.getvalue()
                 cimg = cv2.imdecode(np.frombuffer(b, np.uint8), cv2.IMREAD_COLOR)
                 cv2.imwrite("dl_snap.jpg", cimg)
                 plate = ai_logic.perform_ocr("dl_snap.jpg")
-                st.session_state['live_plate'] = plate
+                if plate:
+                    st.session_state['live_plate'] = plate
+                else:
+                    st.session_state['live_plate'] = "No text detected"
                 st.image(cimg, channels="BGR")
 
     with c_right:
-        st.markdown("### 🔍 Two-Stage Detection Intelligence")
-        curr_plate = st.session_state.get('live_plate', "Waiting...")
+        st.markdown("### 🔍 Results")
+        curr_plate = st.session_state['live_plate']
 
         if curr_plate == "Waiting...":
-            st.write("Awaiting visual input from camera...")
+            st.write("Awaiting camera input...")
         else:
-            st.success(f"**Plate Found:** {curr_plate}")
+            st.success(f"**AI Result:** {curr_plate}")
+
             sec_msg = ai_logic.is_suspicious(curr_plate)
-            if sec_msg: st.error(f"🚨 **SECURITY ALERT:** {sec_msg}")
-            else: st.info("✅ Security Status: CLEAR")
+            if sec_msg: st.error(f"🚨 **ALERT:** {sec_msg}")
+            elif curr_plate != "No text detected": st.info("✅ Security: CLEAR")
 
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                if st.button("Move to Entry Gate"):
+                if st.button("Move to Gate"):
                     st.session_state['entry_plate'] = curr_plate
-                    st.success("Plate Registered")
+                    st.success("Transferred")
             with col_b2:
                 if st.button("Clear / Retry"):
                     st.session_state['live_plate'] = "Waiting..."
+                    # Remove the transfer session state too if user wants full retry
+                    if 'entry_plate' in st.session_state: del st.session_state['entry_plate']
                     st.rerun()
 
-            if st.button("🚨 Blacklist This Vehicle"):
-                ai_logic.add_to_blacklist(curr_plate, "Manual Intelligence Alert")
-                st.warning(f"Vehicle {curr_plate} blacklisted!")
+            if curr_plate != "No text detected" and st.button("🚨 Blacklist Vehicle"):
+                ai_logic.add_to_blacklist(curr_plate, "Intelligence Alert")
+                st.warning(f"Blacklisted!")
                 st.rerun()
 
 elif page == "Parking Operations":
@@ -222,18 +231,18 @@ elif page == "Parking Operations":
         if st.button("Process Entry"):
             if plat and slat:
                 if ai_logic.is_suspicious(plat):
-                    st.error(f"🛑 ENTRY DENIED: Vehicle {plat} is on the security watchlist!")
+                    st.error(f"🛑 ENTRY DENIED: Vehicle {plat} is blacklisted!")
                 else:
                     if parking_lot.park_vehicle(plat, vtype, slat):
-                        st.success(f"Parking sequence complete for {plat}")
+                        st.success(f"Parking complete for {plat}")
                         st.balloons()
-            else: st.error("Please provide plate and slot details")
+            else: st.error("Fill all details")
 
     with t_out:
         out_plat = st.text_input("Exit License Plate")
         if st.button("Check-out & Billing"):
             if ai_logic.is_suspicious(out_plat):
-                st.error(f"🛑 EXIT LOCKED: Vehicle {out_plat} has pending security issues.")
+                st.error(f"🛑 EXIT LOCKED: Security issues pending.")
             else:
                 conn = get_db_connection()
                 cursor = conn.cursor()
@@ -244,37 +253,36 @@ elif page == "Parking Operations":
                     hrs = max(1, (datetime.datetime.now() - datetime.datetime.strptime(e_time, '%Y-%m-%d %H:%M:%S')).total_seconds()/3600)
                     fee = parking_lot.calculate_fee(hrs)
                     parking_lot.remove_parked_vehicle(v_id, hrs)
-                    st.metric("Total Fee", f"{round(fee, 2)} PKR", delta=f"{round(hrs, 2)} hrs")
-                    st.success(f"Vehicle {out_plat} successfully exited")
-                else: st.error("No active parking record found for this plate")
+                    st.metric("Total Fee", f"{round(fee, 2)} PKR")
+                    st.success(f"Exit cleared.")
+                else: st.error("No active record")
                 conn.close()
 
 elif page == "AI Analytics":
-    st.markdown("### 📊 Smart Facility Insights")
+    st.markdown("### 📊 Smart Insights")
     l, r = st.columns(2)
     with l:
         st.info("Peak Demand Forecasting")
-        if st.button("Run Prediction Model"):
-            st.metric("Predicted Peak Hour", ai_logic.predict_peak_hours())
+        if st.button("Run Model"):
+            st.metric("Predicted Peak", ai_logic.predict_peak_hours())
     with r:
-        st.info("Dynamic Violation Check")
-        if st.button("Simulate AI Scan"):
+        st.info("Violation Detection")
+        if st.button("Scan Cameras"):
             v = ai_logic.detect_wrong_parking()
             if v: st.warning(f"⚠️ AI Alert: {v}")
-            else: st.success("No violations detected currently")
+            else: st.success("Operations Normal")
     st.markdown("---")
-    if st.button("Refresh Overstay Alerts"):
+    if st.button("Refresh Overstays"):
         st.table(ai_logic.detect_overstays(0.01))
 
 elif page == "Security":
-    st.markdown("### 🔒 Security & Watchlist Management")
-    bp = st.text_input("Plate to Flag")
-    br = st.text_input("Reason for Watchlist")
-    if st.button("Add to Security Blacklist"):
+    st.markdown("### 🔒 Security Watchlist")
+    bp = st.text_input("Plate Number")
+    br = st.text_input("Violation Reason")
+    if st.button("Add to Blacklist"):
         ai_logic.add_to_blacklist(bp, br)
-        st.success("Vehicle blacklisted and security protocols updated")
+        st.success("Updated")
     st.markdown("---")
-    st.write("#### Active Security Watchlist")
     conn = get_db_connection()
     st.table(conn.execute("SELECT * FROM blacklist").fetchall())
     conn.close()
@@ -282,9 +290,7 @@ elif page == "Security":
 elif page == "Logs":
     st.markdown("### 📜 System Event Records")
     conn = get_db_connection()
-    t_a, t_h = st.tabs(["Currently Parked Units", "Archive History (AI Learning Data)"])
-    with t_a:
-        st.table(conn.execute("SELECT plate_number, vehicle_type, slot_id, entry_time FROM vehicles").fetchall())
-    with t_h:
-        st.table(conn.execute("SELECT * FROM parking_history ORDER BY id DESC LIMIT 20").fetchall())
+    t_a, t_h = st.tabs(["Active Units", "Archive History"])
+    with t_a: st.table(conn.execute("SELECT plate_number, vehicle_type, slot_id, entry_time FROM vehicles").fetchall())
+    with t_h: st.table(conn.execute("SELECT * FROM parking_history ORDER BY id DESC LIMIT 20").fetchall())
     conn.close()
