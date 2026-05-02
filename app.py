@@ -54,9 +54,20 @@ st.markdown(f"""
         border-right: 3px solid {primary_color};
     }}
 
-    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown, .stText, .stMetric label {{
+    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown, .stText, .stMetric label, .stChatMessage {{
         color: {text_color} !important;
         font-family: 'Segoe UI', Arial, sans-serif;
+        font-weight: 600 !important;
+    }}
+
+    /* Force Camera Input Button Visibility */
+    [data-testid="stCameraInputButton"] {{
+        background-color: {primary_color} !important;
+        color: white !important;
+        border: 2px solid white !important;
+        visibility: visible !important;
+        display: block !important;
+        opacity: 1 !important;
     }}
 
     [data-testid="stMetricValue"] {{
@@ -160,16 +171,28 @@ if page == "Live Monitoring":
                     ret, frame = cap.read()
                     if not ret: break
 
-                if int(time.time() * 10) % 10 == 0:
+                # Run OCR every few frames
+                if int(time.time() * 5) % 5 == 0:
                     cv2.imwrite("dl_frame.jpg", frame)
-                    plate = ai_logic.perform_ocr("dl_frame.jpg")
-                    if plate: st.session_state['live_plate'] = plate
+                    plate, box = ai_logic.perform_ocr("dl_frame.jpg", return_box=True)
+                    if plate:
+                        st.session_state['live_plate'] = plate
+                        # Automate: if high confidence plate found, transfer it
+                        st.session_state['entry_plate'] = plate
+                    if box:
+                        st.session_state['last_box'] = box
 
                 h, w, _ = frame.shape
-                cv2.rectangle(frame, (w//4, h//4), (3*w//4, 3*h//4), (255, 0, 255), 3)
+                if 'last_box' in st.session_state and st.session_state['last_box']:
+                    xmin, xmax, ymin, ymax = st.session_state['last_box']
+                    cv2.rectangle(frame, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0, 255, 0), 3)
+                else:
+                    cv2.rectangle(frame, (w//4, h//4), (3*w//4, 3*h//4), (255, 0, 255), 2)
+
                 if st.session_state.get('live_plate') and st.session_state['live_plate'] != "Waiting...":
-                    cv2.putText(frame, st.session_state['live_plate'], (w//4, h//4-10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 255), 3)
+                    msg = f"DETECTED: {st.session_state['live_plate']}"
+                    cv2.putText(frame, msg, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
+
                 FRAME_WIN.image(frame, channels="BGR")
             cap.release()
         else:
