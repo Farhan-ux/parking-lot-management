@@ -32,22 +32,43 @@ def recommend_parking_slot(vehicle_type='Normal'):
 
 # --- 2. Two-Stage CNN ANPR (CRAFT Detection -> Cropping -> CRNN Recognition) ---
 reader = None
-def perform_ocr(image_path):
+def perform_ocr(img_input, return_box=False):
     global reader
     if easyocr is None:
-        return "MOCK-DL-STAGE2"
+        return ("MOCK-DL-STAGE2", [0,0,0,0]) if return_box else "MOCK-DL-STAGE2"
 
     if reader is None:
         reader = easyocr.Reader(['en'], gpu=False, verbose=False)
 
     try:
-        img = cv2.imread(image_path)
+        if isinstance(img_input, str):
+            img = cv2.imread(img_input)
+        else:
+            img = img_input
+
         if img is None: return ""
 
         detection_results = reader.detect(img)
-        boxes = detection_results[0][0]
-        if not boxes:
-            results = reader.readtext(image_path, detail=0, allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        # detection_results[0] is the list of boxes (horizontal_list)
+        if not detection_results or not detection_results[0]:
+            # Fallback to direct readtext if no specific boxes found via detect()
+            results = reader.readtext(img, detail=0, allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+            return "".join(results).upper().replace(" ", "")
+
+        # boxes is the first detected rectangle [x_min, x_max, y_min, y_max]
+        horizontal_list = detection_results[0]
+        if not horizontal_list:
+            results = reader.readtext(img, detail=0, allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+            return "".join(results).upper().replace(" ", "")
+
+        boxes = horizontal_list[0]
+        # Robustly handle different nesting levels (Triple vs Double nesting)
+        while isinstance(boxes, (list, tuple, np.ndarray)) and len(boxes) == 1 and not isinstance(boxes[0], (int, np.integer, float, np.floating)):
+            boxes = boxes[0]
+
+        if len(boxes) != 4:
+            # Fallback if we can't find a valid 4-element box
+            results = reader.readtext(img, detail=0, allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
             return "".join(results).upper().replace(" ", "")
 
         x_min, x_max, y_min, y_max = boxes
@@ -69,7 +90,7 @@ def perform_ocr(image_path):
         crop_path = "plate_crop_final.jpg"
         cv2.imwrite(crop_path, sharpened)
 
-        results = reader.readtext(crop_path,
+        results = reader.readtext(sharpened,
                                  detail=0,
                                  paragraph=False,
                                  allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -78,11 +99,21 @@ def perform_ocr(image_path):
                                  adjust_contrast=0.7)
 
         if results:
-            final_text = "".join(results).upper().replace(" ", "")
+            raw_text = "".join(results).upper().replace(" ", "")
+            if len(raw_text) == 10:
+                final_text = f"{raw_text[:2]} {raw_text[2:4]} {raw_text[4:6]} {raw_text[6:]}"
+            else:
+                final_text = raw_text
+
+            if return_box:
+                return final_text, [x_min, x_max, y_min, y_max]
             return final_text
 
     except Exception as e:
         print(f"Two-Stage CNN Error: {e}")
+
+    if return_box:
+        return "", None
     return ""
 
 # --- 3. Overstay Detection AI ---
@@ -148,3 +179,21 @@ def detect_wrong_parking():
         "Unauthorized VIP Slot usage"
     ]
     return random.choice(violations) if random.random() < 0.2 else None
+
+# --- 7. Dynamic Pricing AI (Yield Management) ---
+def get_dynamic_price(base_rate=50):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM vehicles")
+    occupied = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM parking_slots")
+    total = cursor.fetchone()[0]
+    conn.close()
+
+    occupancy_rate = occupied / total if total > 0 else 0
+    # Dynamic logic: increase price by 20% if >50% full, 50% if >80% full
+    if occupancy_rate > 0.8:
+        return base_rate * 1.5
+    elif occupancy_rate > 0.5:
+        return base_rate * 1.2
+    return base_rate
