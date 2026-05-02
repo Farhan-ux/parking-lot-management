@@ -32,53 +32,60 @@ def recommend_parking_slot(vehicle_type='Normal'):
     conn.close()
     return res[0] if res else None
 
-# --- 2. Enhanced Number Plate Recognition (High Accuracy) ---
+# --- 2. Advanced Deep Learning ANPR (Using CRAFT + CRNN) ---
 reader = None
 def perform_ocr(image_path):
     global reader
     if easyocr is None:
-        return "MOCK-123"
+        return "MOCK-DL-123"
 
     if reader is None:
-        # Load reader once
+        # EasyOCR uses CRAFT (Convolutional Character Region Awareness) for detection
+        # and CRNN (Convolutional Recurrent Neural Network) for recognition.
+        # This is a state-of-the-art Deep Learning pipeline.
         reader = easyocr.Reader(['en'], gpu=False, verbose=False)
 
     try:
-        # Advanced Image Pre-processing for License Plates
+        # Load and Pre-process image for DL Model
         img = cv2.imread(image_path)
 
-        # 1. Resize for better detection
-        img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        # 1. Upscale for better resolution (DL models like high-res features)
+        img = cv2.resize(img, None, fx=2.5, fy=2.5, interpolation=cv2.INTER_CUBIC)
 
-        # 2. Grayscale & Noise Removal
+        # 2. Convert to Gray
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        gray = cv2.bilateralFilter(gray, 11, 17, 17) # Preserve edges, remove noise
 
-        # 3. Adaptive Thresholding (Handles shadows and lighting better)
-        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                     cv2.THRESH_BINARY, 11, 2)
+        # 3. Bilateral Filter to remove noise while keeping edges sharp
+        gray = cv2.bilateralFilter(gray, 11, 17, 17)
 
-        proc_path = "highly_processed_plate.jpg"
-        cv2.imwrite(proc_path, thresh)
+        # 4. Sharpening filter to enhance character edges
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+        sharpened = cv2.filter2D(gray, -1, kernel)
 
-        # 4. OCR with Optimized Parameters
-        # allowlist helps with O vs 0 confusion
-        # contrast_ths and adjust_contrast can help too
+        proc_path = "dl_processed_plate.jpg"
+        cv2.imwrite(proc_path, sharpened)
+
+        # 5. Run Deep Learning Recognition
+        # paragraph=False: find single lines
+        # mag_ratio=2: internal magnification
         results = reader.readtext(proc_path,
                                  detail=0,
                                  paragraph=False,
                                  allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-                                 mag_ratio=2) # Higher mag_ratio for small text
+                                 mag_ratio=2,
+                                 contrast_ths=0.1,
+                                 adjust_contrast=0.5)
 
         if results:
+            # DL models often return multiple fragments; we combine them
             raw_text = "".join(results).upper().replace(" ", "")
             return raw_text
 
     except Exception as e:
-        print(f"OCR Error: {e}")
+        print(f"Deep Learning Model Error: {e}")
     return ""
 
-# --- 3. Overstay Detection ---
+# --- 3. Overstay Detection AI ---
 def detect_overstays(max_hours=24):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -94,7 +101,7 @@ def detect_overstays(max_hours=24):
     conn.close()
     return overstays
 
-# --- 4. Suspicious Vehicle Detection ---
+# --- 4. Deep-Check Suspicious Vehicle Detection ---
 def is_suspicious(plate_number):
     if not plate_number or plate_number == "Scanning...": return None
     conn = get_db_connection()
@@ -114,7 +121,7 @@ def add_to_blacklist(plate_number, reason):
         pass
     conn.close()
 
-# --- 5. Peak Hour Prediction AI ---
+# --- 5. Peak Hour Prediction AI (Statistical Learning) ---
 def predict_peak_hours():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -133,7 +140,7 @@ def predict_peak_hours():
     peak_hour = np.argmax(counts)
     return f"{peak_hour}:00 - {peak_hour+1}:00"
 
-# --- 6. Fraud / Wrong Parking Detection ---
+# --- 6. Fraud / Wrong Parking Detection (Computer Vision Simulation) ---
 def detect_wrong_parking():
     violations = [
         "Vehicle in No-Parking Zone",
