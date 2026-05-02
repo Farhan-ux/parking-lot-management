@@ -1,4 +1,4 @@
-import sqlite3
+from database import get_db_connection
 from vehicle import add_vehicle, remove_vehicle
 from parking_slot import occupy_slot, free_slot, get_available_slots
 from payment_system import add_payment, calculate_fee
@@ -16,8 +16,7 @@ def park_vehicle(vehicle_number, vehicle_type, slot_number):
         return None
 
 def remove_parked_vehicle(vehicle_id, hours_parked):
-    # Get slot_id before removing
-    conn = sqlite3.connect('parking_system.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT slot_id FROM vehicles WHERE id=?", (vehicle_id,))
     res = cursor.fetchone()

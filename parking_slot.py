@@ -1,7 +1,4 @@
-import sqlite3
-
-def get_db_connection():
-    return sqlite3.connect('parking_system.db')
+from database import get_db_connection
 
 def add_slot(slot_id, slot_type='Normal'):
     conn = get_db_connection()
